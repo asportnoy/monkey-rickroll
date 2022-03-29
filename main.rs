@@ -226,7 +226,7 @@ fn duration_string(start_time: SystemTime) -> String {
     let minutes = (duration / 60) % 60;
     let seconds = duration % 60;
 
-    format!("{}h {}m {}s", hours, minutes, seconds)
+    format!("{:02}h {:02}m {:02}s", hours, minutes, seconds)
 }
 
 /// Calculate number of characters that are in the character set
