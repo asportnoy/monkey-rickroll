@@ -115,9 +115,9 @@ fn main() {
     }
 
     println!(
-        "\nAll monkeys spawned! {} monkeys are typing the lyrics of \"Never gonna give you up\" ({} characters)\n",
+        "\nAll monkeys spawned! {} monkeys are typing the lyrics of \"Never gonna give you up\" ({} letters)\n",
         NUM_THREADS,
-        SCRIPT.len().to_formatted_string(&Locale::en),
+        num_chars(&SCRIPT.to_string()).to_formatted_string(&Locale::en),
     );
 
     loop {
@@ -132,9 +132,9 @@ fn main() {
                 if last_index == -1 {
                     // The monkey did it!
                     execute!(stdout, Clear(ClearType::CurrentLine), MoveToColumn(1), Print(format!(
-						"MONKEY {} DID IT! All {} characters of the lyrics of \"Never gonna give you up\" were correctly typed. This took {} attempts ({}).",
+						"MONKEY {} DID IT! All {} letters of the lyrics of \"Never gonna give you up\" were correctly typed. This took {} attempts ({}).",
 						i+1,
-						SCRIPT.len().to_formatted_string(&Locale::en),
+						num_chars(&SCRIPT.to_string()).to_formatted_string(&Locale::en),
 						attempts.to_formatted_string(&Locale::en),
 						duration_string(start_time))
 					)).ok();
@@ -144,17 +144,18 @@ fn main() {
                 // Check if the thread reached a new best length
                 if last_index > best_length {
                     // New best
+                    let text = SCRIPT.chars().take(last_index as usize).collect::<String>();
                     execute!(
                         stdout,
                         Clear(ClearType::CurrentLine),
                         MoveToColumn(1),
                         Print(format!(
-                            "Monkey {} got a new best of {} characters on attempt {} ({}):\n{}\n\n",
+                            "Monkey {} got a new best of {} letter(s) on attempt {} ({}):\n{}\n\n",
                             i + 1,
-                            last_index.to_formatted_string(&Locale::en),
+                            num_chars(&text).to_formatted_string(&Locale::en),
                             attempts.to_formatted_string(&Locale::en),
                             duration_string(start_time),
-                            SCRIPT.chars().take(last_index as usize).collect::<String>()
+                            text
                         )),
                     )
                     .ok();
@@ -226,4 +227,15 @@ fn duration_string(start_time: SystemTime) -> String {
     let seconds = duration % 60;
 
     format!("{}h {}m {}s", hours, minutes, seconds)
+}
+
+/// Calculate number of characters that are in the character set
+fn num_chars(s: &String) -> i32 {
+    let mut i = 0;
+    for c in s.to_lowercase().chars() {
+        if CHARACTERS.contains(c) {
+            i += 1;
+        }
+    }
+    i
 }
