@@ -132,7 +132,7 @@ fn main() {
                 if last_index == -1 {
                     // The monkey did it!
                     execute!(stdout, Clear(ClearType::CurrentLine), MoveToColumn(1), Print(format!(
-						"MONKEY {} DID IT! All {} letters of the lyrics of \"Never gonna give you up\" were correctly typed. This took {} attempts ({}).",
+						"MONKEY #{} DID IT! All {} letters of the lyrics of \"Never gonna give you up\" were correctly typed. This took {} attempts ({}).",
 						i+1,
 						num_chars(&SCRIPT.to_string()).to_formatted_string(&Locale::en),
 						attempts.to_formatted_string(&Locale::en),
@@ -150,7 +150,7 @@ fn main() {
                         Clear(ClearType::CurrentLine),
                         MoveToColumn(1),
                         Print(format!(
-                            "Monkey {} got a new best of {} letter(s) on attempt {} ({}):\n{}\n\n",
+                            "Monkey #{} got a new best of {} letter(s) on attempt {} ({}):\n{}\n\n",
                             i + 1,
                             num_chars(&text).to_formatted_string(&Locale::en),
                             attempts.to_formatted_string(&Locale::en),
