@@ -72,17 +72,17 @@ const NUM_THREADS: i32 = 8;
 fn main() {
     println!("");
 
-    let mut attempts: i32 = 0;
+    let mut attempts: u128 = 0;
     let mut best_length: i32 = 0;
 
     let start_time = SystemTime::now();
 
-    let (tx, rx) = sync_channel(64) as (SyncSender<(i32, i32, i32)>, Receiver<(i32, i32, i32)>);
+    let (tx, rx) = sync_channel(64) as (SyncSender<(i32, u128, i32)>, Receiver<(i32, u128, i32)>);
     for i in 0..NUM_THREADS {
         let thread_tx = tx.clone();
 
         thread::spawn(move || {
-            let mut saved_attempts = 0;
+            let mut saved_attempts: u128 = 0;
             loop {
                 let last_index = run_attempt();
                 saved_attempts += 1;
@@ -91,7 +91,7 @@ fn main() {
                         best_length = last_index;
                     };
 
-                    thread_tx.send((last_index, saved_attempts, i as i32)).ok();
+                    thread_tx.send((last_index, saved_attempts, i)).ok();
 
                     saved_attempts = 0;
                 }
