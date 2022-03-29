@@ -4,6 +4,7 @@ use crossterm::{
 use num_format::{Locale, ToFormattedString};
 use rand::{self, Rng};
 use std::{
+    env,
     io::stdout,
     process::exit,
     sync::mpsc::{sync_channel, Receiver, SyncSender},
@@ -71,10 +72,13 @@ Never gonna say goodbye
 Never gonna tell a lie and hurt you
 ";
 
-const NUM_THREADS: i32 = 8;
-
 fn main() {
     println!("");
+
+    let num_threads = env::var("THREADS")
+        .unwrap_or("2".to_string())
+        .parse::<i32>()
+        .unwrap();
 
     let mut attempts: u128 = 0;
     let mut best_length: i32 = 0;
@@ -85,7 +89,7 @@ fn main() {
     // Touple of (last_index, saved_attempts, thread_index)
     let (tx, rx) = sync_channel(64) as (SyncSender<(i32, u128, i32)>, Receiver<(i32, u128, i32)>);
     // Spawn threads
-    for i in 0..NUM_THREADS {
+    for i in 0..num_threads {
         // Clone transmitter so I can put it in the thread
         let thread_tx = tx.clone();
 
@@ -116,7 +120,7 @@ fn main() {
 
     println!(
         "\nAll monkeys spawned! {} monkeys are typing the lyrics of \"Never gonna give you up\" ({} letters)\n",
-        NUM_THREADS,
+        num_threads,
         num_chars(&SCRIPT.to_string()).to_formatted_string(&Locale::en),
     );
 
