@@ -9,7 +9,7 @@ use std::{
     process::exit,
     sync::mpsc::{sync_channel, Receiver, SyncSender},
     thread,
-    time::{Instant, SystemTime},
+    time::SystemTime,
 };
 
 const CHARACTERS: [char; 27] = [
@@ -99,7 +99,6 @@ fn main() {
         thread::spawn(move || {
             // Save the number of attempts that need to be sent to the main thread
             let mut saved_attempts: u128 = 0;
-            let mut last_sent = Instant::now();
 
             let chars = gen_char_vec();
 
@@ -108,10 +107,7 @@ fn main() {
                 saved_attempts += 1;
                 // Check if the thread should send info to the main thread
                 // This should happen if the thread reaches a new best length or every second
-                if last_index > best_length
-                    || last_index == -1
-                    || last_sent.elapsed().as_millis() > 500
-                {
+                if last_index > best_length || last_index == -1 || saved_attempts >= 1000000 {
                     if last_index > best_length {
                         // Update saved best length
                         best_length = last_index;
@@ -121,7 +117,6 @@ fn main() {
 
                     // Reset saved attempts and last sent time
                     saved_attempts = 0;
-                    last_sent = Instant::now();
                 }
             }
         });
@@ -209,7 +204,7 @@ fn run_attempt(chars: &Vec<char>) -> i32 {
     let mut last_index: i32 = -1;
     for char in chars {
         last_index += 1;
-        if CHARACTERS.contains(&char) && choose_character().ne(&char) {
+        if choose_character().ne(&char) {
             return last_index;
         }
     }
