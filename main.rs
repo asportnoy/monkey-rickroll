@@ -77,22 +77,31 @@ fn main() {
 
     let start_time = SystemTime::now();
 
+    // For threads sending their results to the main thread
+    // Touple of (last_index, saved_attempts, thread_index)
     let (tx, rx) = sync_channel(64) as (SyncSender<(i32, u128, i32)>, Receiver<(i32, u128, i32)>);
+    // Spawn threads
     for i in 0..NUM_THREADS {
+        // Clone transmitter so I can put it in the thread
         let thread_tx = tx.clone();
 
         thread::spawn(move || {
+            // Save the number of attempts that need to be sent to the main thread
             let mut saved_attempts: u128 = 0;
             loop {
                 let last_index = run_attempt();
                 saved_attempts += 1;
+                // Check if the thread should send info to the main thread
+                // This should happen if the thread reaches a new best length or every 1 million attempts
                 if last_index > best_length || last_index == -1 || saved_attempts >= 1000000 {
                     if last_index > best_length {
+                        // Update saved best length
                         best_length = last_index;
                     };
 
                     thread_tx.send((last_index, saved_attempts, i)).ok();
 
+                    // Reset saved attempts
                     saved_attempts = 0;
                 }
             }
@@ -109,9 +118,12 @@ fn main() {
 
     loop {
         match rx.recv() {
+            // Data recieved from a thread
             Ok((last_index, saved_attempts, i)) => {
+                // Update attempts
                 attempts += saved_attempts;
 
+                // Check if the thread reached the end of the lyrics
                 if last_index == -1 {
                     // The monkey did it!
                     println!("MONKEY {} DID IT! All {} characters of the lyrics of \"Never gonna give you up\" were correctly typed. This took {} attempts ({}).",
@@ -122,6 +134,7 @@ fn main() {
                     exit(0);
                 }
 
+                // Check if the thread reached a new best length
                 if last_index > best_length {
                     // New best
                     println!(
@@ -140,6 +153,8 @@ fn main() {
     }
 }
 
+/// Runs an attempt at typing the lyrics
+/// Returns the amount of characters correctly typed, or -1 if it was completed
 fn run_attempt() -> i32 {
     let mut last_index: i32 = -1;
     for (i, char) in SCRIPT.to_lowercase().chars().enumerate() {
