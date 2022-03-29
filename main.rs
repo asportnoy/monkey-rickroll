@@ -1,6 +1,10 @@
+use crossterm::{
+    cursor::MoveToColumn, execute, style::Print, terminal::Clear, terminal::ClearType,
+};
 use num_format::{Locale, ToFormattedString};
 use rand::{self, Rng};
 use std::{
+    io::stdout,
     process::exit,
     sync::mpsc::{sync_channel, Receiver, SyncSender},
     thread,
@@ -117,6 +121,7 @@ fn main() {
     );
 
     loop {
+        let mut stdout = stdout();
         match rx.recv() {
             // Data recieved from a thread
             Ok((last_index, saved_attempts, i)) => {
@@ -126,27 +131,56 @@ fn main() {
                 // Check if the thread reached the end of the lyrics
                 if last_index == -1 {
                     // The monkey did it!
-                    println!("MONKEY {} DID IT! All {} characters of the lyrics of \"Never gonna give you up\" were correctly typed. This took {} attempts ({}).",
-					i+1,
-					SCRIPT.len().to_formatted_string(&Locale::en),
-					attempts.to_formatted_string(&Locale::en),
-					duration_string(start_time));
+                    execute!(stdout, Clear(ClearType::CurrentLine), MoveToColumn(1), Print(format!(
+						"MONKEY {} DID IT! All {} characters of the lyrics of \"Never gonna give you up\" were correctly typed. This took {} attempts ({}).",
+						i+1,
+						SCRIPT.len().to_formatted_string(&Locale::en),
+						attempts.to_formatted_string(&Locale::en),
+						duration_string(start_time))
+					)).ok();
                     exit(0);
                 }
 
                 // Check if the thread reached a new best length
                 if last_index > best_length {
                     // New best
-                    println!(
-                        "Monkey {} got a new best of {} characters on attempt {} ({}):\n{}\n",
-                        i + 1,
-                        last_index.to_formatted_string(&Locale::en),
-                        attempts.to_formatted_string(&Locale::en),
-                        duration_string(start_time),
-                        SCRIPT.chars().take(last_index as usize).collect::<String>()
-                    );
+                    execute!(
+                        stdout,
+                        Clear(ClearType::CurrentLine),
+                        MoveToColumn(1),
+                        Print(format!(
+                            "Monkey {} got a new best of {} characters on attempt {} ({}):\n{}\n\n",
+                            i + 1,
+                            last_index.to_formatted_string(&Locale::en),
+                            attempts.to_formatted_string(&Locale::en),
+                            duration_string(start_time),
+                            SCRIPT.chars().take(last_index as usize).collect::<String>()
+                        )),
+                    )
+                    .ok();
                     best_length = last_index;
                 }
+
+                let seconds_elapsed = seconds_elapsed(start_time) as u128;
+
+                execute!(
+                    stdout,
+                    Clear(ClearType::CurrentLine),
+                    MoveToColumn(1),
+                    Print(format!(
+                        "Ran {} attempts in {} ({}/s)",
+                        attempts.to_formatted_string(&Locale::en),
+                        duration_string(start_time),
+                        (attempts
+                            / if seconds_elapsed > 0 {
+                                seconds_elapsed
+                            } else {
+                                1
+                            })
+                        .to_formatted_string(&Locale::en),
+                    ))
+                )
+                .ok();
             }
             Err(_) => (),
         };
@@ -177,10 +211,15 @@ fn choose_character() -> String {
         .to_string()
 }
 
+/// Get seconds elapsed since start time
+fn seconds_elapsed(start_time: SystemTime) -> u64 {
+    let end_time = SystemTime::now();
+    end_time.duration_since(start_time).unwrap().as_secs()
+}
+
 /// Generate duration string
 fn duration_string(start_time: SystemTime) -> String {
-    let end_time = SystemTime::now();
-    let duration = end_time.duration_since(start_time).unwrap().as_secs();
+    let duration = seconds_elapsed(start_time);
 
     let hours = (duration / 60) / 60;
     let minutes = (duration / 60) % 60;
