@@ -1,18 +1,21 @@
 use crossterm::{
     cursor::MoveToColumn, execute, style::Print, terminal::Clear, terminal::ClearType,
 };
+use fastrand;
 use num_format::{Locale, ToFormattedString};
-use rand::{self, Rng};
 use std::{
     env,
     io::stdout,
     process::exit,
     sync::mpsc::{sync_channel, Receiver, SyncSender},
     thread,
-    time::SystemTime,
+    time::{Instant, SystemTime},
 };
 
-const CHARACTERS: &str = "abcdefghijklmnopqrstuvwxyz";
+const CHARACTERS: [char; 27] = [
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
+    't', 'u', 'v', 'w', 'x', 'y', 'z', ' ',
+];
 
 const SCRIPT: &str = "We're no strangers to love
 You know the rules and so do I
@@ -96,12 +99,19 @@ fn main() {
         thread::spawn(move || {
             // Save the number of attempts that need to be sent to the main thread
             let mut saved_attempts: u128 = 0;
+            let mut last_sent = Instant::now();
+
+            let chars = gen_char_vec();
+
             loop {
-                let last_index = run_attempt();
+                let last_index = run_attempt(&chars);
                 saved_attempts += 1;
                 // Check if the thread should send info to the main thread
-                // This should happen if the thread reaches a new best length or every 1 million attempts
-                if last_index > best_length || last_index == -1 || saved_attempts >= 1000000 {
+                // This should happen if the thread reaches a new best length or every second
+                if last_index > best_length
+                    || last_index == -1
+                    || last_sent.elapsed().as_millis() > 500
+                {
                     if last_index > best_length {
                         // Update saved best length
                         best_length = last_index;
@@ -109,8 +119,9 @@ fn main() {
 
                     thread_tx.send((last_index, saved_attempts, i)).ok();
 
-                    // Reset saved attempts
+                    // Reset saved attempts and last sent time
                     saved_attempts = 0;
+                    last_sent = Instant::now();
                 }
             }
         });
@@ -193,27 +204,22 @@ fn main() {
 }
 
 /// Runs an attempt at typing the lyrics
-/// Returns the amount of characters correctly typed, or -1 if it was completed
-fn run_attempt() -> i32 {
+/// Returns the amount of characters correctly typed
+fn run_attempt(chars: &Vec<char>) -> i32 {
     let mut last_index: i32 = -1;
-    for (i, char) in SCRIPT.to_lowercase().chars().enumerate() {
-        if CHARACTERS.contains(char) && choose_character().ne(&char.to_string()) {
-            last_index = i as i32;
-            break;
+    for char in chars {
+        last_index += 1;
+        if CHARACTERS.contains(&char) && choose_character().ne(&char) {
+            return last_index;
         }
     }
 
-    last_index
+    -1
 }
 
 /// Choose a random character from CHARACTERS
-fn choose_character() -> String {
-    let mut rng = rand::thread_rng();
-    CHARACTERS
-        .chars()
-        .nth(rng.gen_range(0..CHARACTERS.len()))
-        .unwrap()
-        .to_string()
+fn choose_character() -> char {
+    CHARACTERS[fastrand::usize(0..CHARACTERS.len())]
 }
 
 /// Get seconds elapsed since start time
@@ -237,9 +243,20 @@ fn duration_string(start_time: SystemTime) -> String {
 fn num_chars(s: &String) -> i32 {
     let mut i = 0;
     for c in s.to_lowercase().chars() {
-        if CHARACTERS.contains(c) {
+        if CHARACTERS.contains(&c) {
             i += 1;
         }
     }
     i
+}
+
+/// Generate vector of characters in the script
+fn gen_char_vec() -> Vec<char> {
+    let mut chars = Vec::from_iter(SCRIPT.to_lowercase().chars());
+    for (i, char) in chars.clone().iter().enumerate().rev() {
+        if !CHARACTERS.contains(&char) {
+            chars.remove(i);
+        }
+    }
+    chars
 }
