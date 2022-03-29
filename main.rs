@@ -107,7 +107,7 @@ fn main() {
                 saved_attempts += 1;
                 // Check if the thread should send info to the main thread
                 // This should happen if the thread reaches a new best length or every second
-                if last_index > best_length || last_index == -1 || saved_attempts >= 1000000 {
+                if last_index > best_length || last_index == -1 || saved_attempts > 1000000 {
                     if last_index > best_length {
                         // Update saved best length
                         best_length = last_index;
