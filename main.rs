@@ -9,7 +9,7 @@ use std::{
     process::exit,
     sync::mpsc::{sync_channel, Receiver, SyncSender},
     thread,
-    time::SystemTime,
+    time::Instant,
 };
 
 const CHARACTERS: [char; 27] = [
@@ -86,7 +86,9 @@ fn main() {
     let mut attempts: u128 = 0;
     let mut best_length: i32 = 0;
 
-    let start_time = SystemTime::now();
+    let start_time = Instant::now();
+
+    let mut progress_vec: Vec<(Instant, u128)> = vec![(start_time, 0)];
 
     // For threads sending their results to the main thread
     // Touple of (last_index, saved_attempts, thread_index)
@@ -172,7 +174,23 @@ fn main() {
                     best_length = last_index;
                 }
 
-                let seconds_elapsed = seconds_elapsed(start_time) as u128;
+                // Remove elements older than 5 minutes
+                progress_vec.retain(|&(time, _)| time.elapsed().as_secs() < 60 * 1);
+
+                if progress_vec.last().unwrap().0.elapsed().as_secs() >= 1 {
+                    // Record new progress
+                    progress_vec.push((Instant::now(), attempts));
+                }
+
+                let first_progress = progress_vec.first().unwrap();
+
+                let seconds_elaped = first_progress.0.elapsed().as_secs() as u128;
+                let attempts_elapsed = attempts - first_progress.1;
+                let attemps_per_second = if seconds_elaped > 0 {
+                    attempts_elapsed / seconds_elaped
+                } else {
+                    0
+                };
 
                 execute!(
                     stdout,
@@ -180,15 +198,9 @@ fn main() {
                     MoveToColumn(1),
                     Print(format!(
                         "Ran {} attempts in {} ({}/s)",
-                        attempts.to_formatted_string(&Locale::en),
+                        sig_figs(attempts, 3).to_formatted_string(&Locale::en),
                         duration_string(start_time),
-                        (attempts
-                            / if seconds_elapsed > 0 {
-                                seconds_elapsed
-                            } else {
-                                1
-                            })
-                        .to_formatted_string(&Locale::en),
+                        sig_figs(attemps_per_second, 3).to_formatted_string(&Locale::en),
                     ))
                 )
                 .ok();
@@ -216,16 +228,9 @@ fn run_attempt(chars: &Vec<char>) -> i32 {
 fn choose_character() -> char {
     CHARACTERS[fastrand::usize(0..CHARACTERS.len())]
 }
-
-/// Get seconds elapsed since start time
-fn seconds_elapsed(start_time: SystemTime) -> u64 {
-    let end_time = SystemTime::now();
-    end_time.duration_since(start_time).unwrap().as_secs()
-}
-
 /// Generate duration string
-fn duration_string(start_time: SystemTime) -> String {
-    let duration = seconds_elapsed(start_time);
+fn duration_string(start_time: Instant) -> String {
+    let duration = start_time.elapsed().as_secs();
 
     let hours = (duration / 60) / 60;
     let minutes = (duration / 60) % 60;
@@ -254,4 +259,16 @@ fn gen_char_vec() -> Vec<char> {
         }
     }
     chars
+}
+
+/// Round number to significant figures
+fn sig_figs<T: Into<u128>>(number: T, sig_figs: u32) -> u128 {
+    let number: u128 = number.into();
+    let digits = number.to_string().len() as u32;
+    let divide_by = 10u128.pow(digits - sig_figs);
+    if divide_by == 0 {
+        return number;
+    }
+
+    (number / divide_by) * divide_by
 }
