@@ -198,9 +198,9 @@ fn main() {
                     MoveToColumn(1),
                     Print(format!(
                         "Ran {} attempts in {} ({}/s)",
-                        sig_figs(attempts, 3).to_formatted_string(&Locale::en),
+                        sig_figs(attempts, 3, 11).to_formatted_string(&Locale::en),
                         duration_string(start_time),
-                        sig_figs(attemps_per_second, 3).to_formatted_string(&Locale::en),
+                        sig_figs(attemps_per_second, 3, 0).to_formatted_string(&Locale::en),
                     ))
                 )
                 .ok();
@@ -262,9 +262,12 @@ fn gen_char_vec() -> Vec<char> {
 }
 
 /// Round number to significant figures
-fn sig_figs<T: Into<u128>>(number: T, sig_figs: u32) -> u128 {
+fn sig_figs<T: Into<u128>>(number: T, sig_figs: u32, max_digits: u32) -> u128 {
     let number: u128 = number.into();
-    let digits = number.to_string().len() as u32;
+    let mut digits = number.to_string().len() as u32;
+    if max_digits != 0 && digits > max_digits {
+        digits = max_digits;
+    }
     let divide_by = 10u128.pow(digits - sig_figs);
     if divide_by == 0 {
         return number;
