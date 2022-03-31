@@ -228,6 +228,7 @@ fn run_attempt(chars: &[char], rng: &Rng) -> u16 {
 fn choose_character(rng: &Rng) -> char {
     CHARACTERS[rng.usize(0..CHARACTERS.len())]
 }
+
 /// Generate duration string
 fn duration_string(start_time: Instant) -> String {
     let duration = start_time.elapsed().as_secs();
