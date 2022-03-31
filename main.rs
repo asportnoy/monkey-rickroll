@@ -145,7 +145,7 @@ fn main() {
             // Check if the thread reached a new best length
             if last_index > best_length {
                 // New best
-                let text = SCRIPT.chars().take(last_index as usize).collect::<String>();
+                let text = &SCRIPT[..last_index as usize];
                 execute!(
                     stdout,
                     Clear(ClearType::CurrentLine),
@@ -153,7 +153,7 @@ fn main() {
                     Print(format!(
                         "Monkey #{} got a new best of {} letter(s) on attempt {} ({}):\n{}\n\n",
                         i + 1,
-                        num_chars(&text).to_formatted_string(&Locale::en),
+                        num_chars(text).to_formatted_string(&Locale::en),
                         attempts.to_formatted_string(&Locale::en),
                         duration_string(start_time),
                         text
