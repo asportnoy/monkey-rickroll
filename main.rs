@@ -5,7 +5,7 @@ use fastrand::{self, Rng};
 use num_format::{Locale, ToFormattedString};
 use std::{
     env,
-    io::stdout,
+    io::{stdout, Write},
     process::exit,
     sync::mpsc::{sync_channel, Receiver, SyncSender},
     thread,
@@ -142,19 +142,6 @@ fn main() {
             // Update attempts
             attempts += saved_attempts;
 
-            // Check if the thread reached the end of the lyrics
-            if last_index == total {
-                // The monkey did it!
-                execute!(stdout, Clear(ClearType::CurrentLine), MoveToColumn(1), Print(format!(
-        						"MONKEY #{} DID IT! All {} letters of the lyrics of \"Never gonna give you up\" were correctly typed. This took {} attempts ({}).",
-        						i+1,
-        						num_chars(SCRIPT).to_formatted_string(&Locale::en),
-        						attempts.to_formatted_string(&Locale::en),
-        						duration_string(start_time))
-        					)).ok();
-                exit(0);
-            }
-
             // Check if the thread reached a new best length
             if last_index > best_length {
                 // New best
@@ -174,6 +161,19 @@ fn main() {
                 )
                 .ok();
                 best_length = last_index;
+            }
+
+            // Check if the thread reached the end of the lyrics
+            if last_index == total {
+                // The monkey did it!
+                execute!(stdout, Clear(ClearType::CurrentLine), MoveToColumn(1), Print(format!(
+        						"All {} letters of the lyrics of \"Never gonna give you up\" were correctly typed! This took {} attempts ({}).",
+        						num_chars(SCRIPT).to_formatted_string(&Locale::en),
+        						attempts.to_formatted_string(&Locale::en),
+        						duration_string(start_time))
+        					)).ok();
+                stdout.flush().ok();
+                exit(0);
             }
 
             // Remove elements older than 5 minutes
